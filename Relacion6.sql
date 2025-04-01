@@ -222,15 +222,165 @@ having sum(nhoras) between 15 and 100;
 /*17. Lista de empleados que no son jefes de ningún otro empleado.*/
 select e.*
 from Empleado e
-where cdemp not in (select e.cdjefe
-				from Empleado e
-                );
+where cdemp not in (select cdjefe
+				from Empleado
+                where cdjefe is not null);
                 
 /*18. Se quiere premiar a los empleados del departamento que mejor productividad tenga. Para ello se
 decide que una medida de la productividad puede ser el número de horas trabajadas por
 empleados del departamento en proyectos, dividida por los empleados de ese departamento.
 ¿Qué departamento es el más productivo?*/
-                    
+select p.*, sum(nhoras)/count(cdemp) as 'Productividad'
+from Trabaja t
+inner join Proyecto p
+on t.cdpro=p.cdpro
+group by t.cdpro
+having sum(nhoras)/count(cdemp)=(select sum(nhoras)/count(cdemp)
+										from Trabaja
+                                        group by cdpro
+                                        order by 1 desc limit 1);
+
+/*17. Lista de empleados que no son jefes de ningún otro empleado.*/
+select e.*
+from Empleado e
+where cdemp not in (select cdjefe
+				from Empleado
+                where cdjefe is not null);
+                
+/*18. Se quiere premiar a los empleados del departamento que mejor productividad tenga. Para ello se
+decide que una medida de la productividad puede ser el número de horas trabajadas por
+empleados del departamento en proyectos, dividida por los empleados de ese departamento.
+¿Qué departamento es el más productivo?*/
+select p.*, sum(nhoras)/count(cdemp) as 'Productividad'
+from Trabaja t
+inner join Proyecto p
+on t.cdpro=p.cdpro
+group by t.cdpro
+having sum(nhoras)/count(cdemp)=(select sum(nhoras)/count(cdemp)
+										from Trabaja
+                                        group by cdpro
+                                        order by 1 desc limit 1);
+
+/*/*17. Lista de empleados que no son jefes de ningún otro empleado.*/
+select e.*
+from Empleado e
+where cdemp not in (select cdjefe
+				from Empleado
+                where cdjefe is not null);
+                
+/*18. Se quiere premiar a los empleados del departamento que mejor productividad tenga. Para ello se
+decide que una medida de la productividad puede ser el número de horas trabajadas por
+empleados del departamento en proyectos, dividida por los empleados de ese departamento.
+¿Qué departamento es el más productivo?*/
+select p.*, sum(nhoras)/count(cdemp) as 'Productividad'
+from Trabaja t
+inner join Proyecto p
+on t.cdpro=p.cdpro
+group by t.cdpro
+having sum(nhoras)/count(cdemp)=(select sum(nhoras)/count(cdemp)
+										from Trabaja
+                                        group by cdpro
+                                        order by 1 desc limit 1);
+
+/*19. Lista donde aparezcan los nombres de empleados, nombres de sus departamentos y nombres de
+proyectos en los que trabajan. Los empleados sin departamento, o que no trabajen en proyectos
+aparecerán en la lista y en lugar del departamento o el proyecto aparecerá “*****”.*/
+select e.cdemp, e.nombre, ifnull(d.nombre, '*****') as 'Departamento', ifnull(p.nombre, '*****') as 'Proyecto'
+from Empleado e
+left join Trabaja t
+on t.cdemp=e.cdemp 
+left join Departamento d
+on e.cddep=d.cddep
+left join Proyecto p
+on p.cddep=d.cddep and t.cdpro=p.cdpro;
+
+/*20. Lista de los empleados indicando el número de días que llevan trabajando en la empresa.*/
+ select cdemp, nombre, datediff(now(), fecha_ingreso)
+from Empleado;
+ 
+/*21. Número de proyectos en los que trabajan empleados de la ciudad de Córdoba.*/
+select count(distinct p.cdpro) as 'nºProyectos'
+from Proyecto p
+inner join Departamento d
+on d.cddep=p.cddep
+inner join Trabaja t
+on t.cdpro=p.cdpro
+where nhoras <>0 and ciudad like 'Córdoba';
+
+/*22. Lista de los empleados que son jefes de más de un empleado, junto con el número de empleados
+que están a su cargo.*/
+select jefe.nombre, count(e.cdemp) as 'nºEmpleados'
+from Empleado e
+inner join Empleado as jefe
+on e.cdjefe=jefe.cdemp
+group by e.cdjefe
+having count(e.cdemp)>1;
+
+/*23. Listado que indique años y número de empleados contratados cada año, todo ordenado por orden
+ascendente de año.*/
+select year(fecha_ingreso) as 'Ingreso', count(cdemp) as 'nºEmpleados'
+from Empleado
+group by year(fecha_ingreso)
+order by year(fecha_ingreso) asc;
+
+/*24. Listar los nombres de proyectos en los que aparezca la palabra “energía”, indicando también el
+nombre del departamento que lo gestiona.*/
+select p.nombre, d.nombre
+from Proyecto p
+inner join Departamento d
+on p.cddep=d.cddep
+where p.nombre like '%energía%';
+
+/*25. Lista de departamentos que están en la misma ciudad que el departamento “Gerencia”.*/
+select *
+from Departamento
+where ciudad = (select ciudad
+				from Departamento
+				where nombre like 'Gerencia');
+
+/*26. Lista de departamentos donde exista algún trabajador con apellido “Amarillo”.*/
+select d.*, e.nombre
+from Departamento d
+inner join Empleado e
+on e.cddep=d.cddep
+where e.nombre like '%Amarillo%';
+
+/*27. Lista de los nombres de proyecto y departamento que los gestiona, de los proyectos que tienen 0
+horas de trabajo realizadas.*/
+select p.nombre, d.nombre
+from Departamento d
+inner join Proyecto p
+on p.cddep=d.cddep
+inner join Trabaja t
+on t.cdpro=p.cdpro
+where nhoras=0;
+
+/*28. Asignar el empleado “Manuel Amarillo” al departamento “05”*/
+update Empleado
+set cddep='05'
+where nombre like 'Manuel Amarillo';
+
+select * from Empleado;
+
+/*29. Borrar los departamentos que no tienen empleados.*/
+Delete from Departamento where cddep not in(select distinct cddep
+											from Empleado);
+
+select * from Departamento;
+
+/*30. Añadir todos los empleados del departamento 02 al proyecto MES.*/
+insert into Trabaja(cdemp, cdpro)
+select cdemp, 'MES'
+from Empleado
+where cddep='02';
+
+select * from Trabaja order by cdpro;
+
+
+
+
+
+
 
 
 
