@@ -140,9 +140,9 @@ order by nombre;
 /*8. Fechas de ingreso mínima. y máxima, por cada departamento.*/
 select min(fecha_ingreso), max(fecha_ingreso), d.nombre
 from Empleado e
-inner join Departamento d
+right join Departamento d
 on e.cddep=d.cddep
-group by e.cddep;
+group by d.cddep;
 
 /*9. Nombres de empleados que trabajan en el mismo departamento que Carmen Violeta.*/
 select e.nombre, ciudad
@@ -151,10 +151,12 @@ inner join Departamento d
 on e.cddep=d.cddep
 where ciudad=(select ciudad
 				from Departamento d, Empleado e
-				where e.cddep=d.cddep and e.nombre like 'Carmen Violeta');
+				where e.cddep=d.cddep and e.nombre like 'Carmen Violeta')
+and e.nombre <>'Carmen Violeta';
 
 /*10. Media del año de ingreso en la empresa de los empleados que trabajan en algún proyecto.*/
-select avg(fecha_ingreso) as 'Media Ingreso' , cdpro as 'Proyecto'
+/*round redondea*/
+select round(avg(year(fecha_ingreso))) as 'Media Ingreso' , cdpro as 'Proyecto'
 from Empleado e
 inner join Trabaja t
 on e.cdemp=t.cdemp
@@ -162,13 +164,18 @@ group by cdpro;
 
 /*11. Nombre de los empleados que tienen de apellido Verde o Rojo, y simultáneamente su jefa es 
 Esperanza Amarillo.*/
-/*Mal*/
 select nombre, cdemp, cdjefe
 from Empleado 
 where (nombre like '%Verde' or nombre like '%Rojo')
 and cdjefe=(select e.cdemp
 			from Empleado e
 			where e.nombre like ('Esperanza Amarillo'));
+            
+select distinct e.nombre
+from Empleado as e, Empleado as jefe
+where e.cdjefe=jefe.cdemp
+and (e.nombre like '%Verde%' or e.nombre like '%Rojo%')
+and jefe.nombre like 'Esperanza Amarillo';
           
 /*12. Suponiendo que la letra que forma parte del código de empleado es la categoría laboral, listar los
 empleados de categoría B que trabajan en algún proyecto.*/
@@ -183,14 +190,13 @@ departamento. Ordenada por nombre de ciudad y a igualdad de esta por el nombre d
 departamento.*/
 select d.nombre, ciudad, count(cdemp) as 'nºempleados'
 from Departamento d
-inner join Empleado e
+left join Empleado e
 on d.cddep=e.cddep
-group by e.cddep
+group by d.cddep
 order by ciudad, d.nombre;
 
 /*14. Lista de nombres de proyecto y suma de horas trabajadas en él, de los proyectos en los que se ha
 trabajado más horas de la media de horas trabajadas en todos los proyectos.*/
-
 select p.nombre, sum(nhoras)
 from Proyecto p
 right join Trabaja t
@@ -240,47 +246,6 @@ having sum(nhoras)/count(cdemp)=(select sum(nhoras)/count(cdemp)
                                         group by cdpro
                                         order by 1 desc limit 1);
 
-/*17. Lista de empleados que no son jefes de ningún otro empleado.*/
-select e.*
-from Empleado e
-where cdemp not in (select cdjefe
-				from Empleado
-                where cdjefe is not null);
-                
-/*18. Se quiere premiar a los empleados del departamento que mejor productividad tenga. Para ello se
-decide que una medida de la productividad puede ser el número de horas trabajadas por
-empleados del departamento en proyectos, dividida por los empleados de ese departamento.
-¿Qué departamento es el más productivo?*/
-select p.*, sum(nhoras)/count(cdemp) as 'Productividad'
-from Trabaja t
-inner join Proyecto p
-on t.cdpro=p.cdpro
-group by t.cdpro
-having sum(nhoras)/count(cdemp)=(select sum(nhoras)/count(cdemp)
-										from Trabaja
-                                        group by cdpro
-                                        order by 1 desc limit 1);
-
-/*/*17. Lista de empleados que no son jefes de ningún otro empleado.*/
-select e.*
-from Empleado e
-where cdemp not in (select cdjefe
-				from Empleado
-                where cdjefe is not null);
-                
-/*18. Se quiere premiar a los empleados del departamento que mejor productividad tenga. Para ello se
-decide que una medida de la productividad puede ser el número de horas trabajadas por
-empleados del departamento en proyectos, dividida por los empleados de ese departamento.
-¿Qué departamento es el más productivo?*/
-select p.*, sum(nhoras)/count(cdemp) as 'Productividad'
-from Trabaja t
-inner join Proyecto p
-on t.cdpro=p.cdpro
-group by t.cdpro
-having sum(nhoras)/count(cdemp)=(select sum(nhoras)/count(cdemp)
-										from Trabaja
-                                        group by cdpro
-                                        order by 1 desc limit 1);
 
 /*19. Lista donde aparezcan los nombres de empleados, nombres de sus departamentos y nombres de
 proyectos en los que trabajan. Los empleados sin departamento, o que no trabajen en proyectos
@@ -295,11 +260,11 @@ left join Proyecto p
 on p.cddep=d.cddep and t.cdpro=p.cdpro;
 
 /*20. Lista de los empleados indicando el número de días que llevan trabajando en la empresa.*/
- select cdemp, nombre, datediff(now(), fecha_ingreso)
+select cdemp, nombre, ifnull(datediff(now(), fecha_ingreso), 'no ha trabajado') as 'Dias'
 from Empleado;
  
 /*21. Número de proyectos en los que trabajan empleados de la ciudad de Córdoba.*/
-select count(distinct p.cdpro) as 'nºProyectos'
+select count(p.cdpro) as 'nºProyectos'
 from Proyecto p
 inner join Departamento d
 on d.cddep=p.cddep
@@ -375,12 +340,3 @@ from Empleado
 where cddep='02';
 
 select * from Trabaja order by cdpro;
-
-
-
-
-
-
-
-
-
