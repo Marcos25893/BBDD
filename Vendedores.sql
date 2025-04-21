@@ -408,3 +408,313 @@ where id_art IN (select id_art
 update articulos set precio=precio*1.01
 where id_art = ();
 */
+
+/*24 bajar el precio un 5%  al articulo que mas 
+ hace que no se vende*/
+update articulos set  precio=precio-(precio*5/100)
+where id_art in (select id_art
+				from vendart
+				where fech_venta=(select min(fech_venta) 
+                from vendart));
+
+/*averiguo el articulo que hace mas tiempo se vendio*/
+select id_art
+				from vendart
+				where fech_venta=(select min(fech_venta) 
+                from vendart);
+
+
+/*25 cerrar la tienda que menos ha vendido*/
+delete from tienda
+where id_tienda in (select id_tienda
+					from vendart, vendedores
+					where vendart.id_vend=vendedores.id_vend
+					group by id_tienda
+					having count(*)=(select count(*)
+									from vendart, vendedores
+									where vendart.id_vend=vendedores.id_vend
+									group by id_tienda
+									order by 1 limit 1));
+
+/*tienda que menos ha vendido*/
+
+select id_tienda
+from vendart, vendedores
+where vendart.id_vend=vendedores.id_vend
+group by id_tienda
+having count(*)=(select count(*)
+		from vendart, vendedores
+		where vendart.id_vend=vendedores.id_vend
+		group by id_tienda
+        order by 1 limit 1);
+
+/*compruebo que he borrado la tienda o cerrado la tienda*/
+select * from tienda;
+
+/* la puedo hacer creando una vista*/
+create view cerrartienda as
+select id_tienda
+from vendart, vendedores
+where vendart.id_vend=vendedores.id_vend
+group by id_tienda
+having count(*)=(select count(*)
+		from vendart, vendedores
+		where vendart.id_vend=vendedores.id_vend
+		group by id_tienda
+        order by 1 limit 1);
+        
+select * from cerrartienda;
+/*para borrarla*/
+delete from tienda
+where id_tienda in (select id_tienda from cerrartienda);
+
+select * from tienda;
+
+/*26 la tienda luna pasa a llamarse sol y luna*/
+
+update tienda set nom_tienda='Sol y Luna'
+where nom_tienda like 'Luna';
+ 
+ select * from tienda;
+/*27 despedir al trabajador que mas vendio*/
+/*trabajajador que mas vendio*/
+select id_vend
+from vendart
+group by id_vend
+having count(*)=(select count(*)
+				from vendart
+				group by id_vend
+                order by 1 desc limit 1);
+       /*lo elimino*/         
+delete from vendedores
+where id_vend in (select id_vend
+					from vendart
+					group by id_vend
+					having count(*)=(select count(*)
+									from vendart
+									group by id_vend
+									order by 1 desc limit 1));
+                                    
+                                    
+/*tambien lo podeis hacer con una vista*/
+/*28 las tiendas que no vendieron lapices 
+pasan todas a sevilla*/
+
+update tienda set id_ciudad=(select id_ciudad
+							from ciudad
+                            where nom_ciudad like 'Sevilla')
+where id_tienda not in(select distinct id_tienda
+						from vendart,vendedores,articulos
+						where vendart.id_vend=vendedores.id_vend
+						and vendart.id_art=articulos.id_art
+						and nom_art like 'Lapiz');
+
+/*tiendas que vendieron lapices*/
+select distinct id_tienda
+from vendart,vendedores,articulos
+where vendart.id_vend=vendedores.id_vend
+and vendart.id_art=articulos.id_art
+and nom_art like 'Lapiz';
+
+/*29 depedir al vendedore que menos dinero ha hecho vendiendo*/
+/*averiguo quien es el vendedor*/
+select id_vend 
+from vendart,articulos
+where vendart.id_art=articulos.id_art
+group by id_vend
+having sum(precio)=(select sum(precio)
+				from vendart,articulos
+				where vendart.id_art=articulos.id_art
+				group by id_vend
+                order by 1 limit 1);
+
+
+delete from vendedores
+where id_vend in (select id_vend 
+					from vendart,articulos
+					where vendart.id_art=articulos.id_art
+					group by id_vend
+					having sum(precio)=(select sum(precio)
+										from vendart,articulos
+										where vendart.id_art=articulos.id_art
+										group by id_vend
+										order by 1 limit 1));
+/* pendiente hacerla con una vista*/
+                
+                
+select * from vendedores;
+
+/*30 el articulo que menos se ha vendido deja de estar en stock*/
+
+select id_art, count(*)
+from vendart
+group by id_art
+having count(*)=(select count(*)
+				from vendart
+				group by id_art
+				order by 1 limit 1);
+
+select * from vendart;
+
+delete from articulos
+where id_art in (select id_art
+from vendart
+group by id_art
+having count(*)=(select count(*)
+		from vendart
+		group by id_art
+        order by 1 limit 1));
+        
+select * from articulos;
+/*31 el articulo que menos
+ dinero ha generado deja de estar en stock*/
+/*creaNDO UNA VISTA*/
+
+create view articulosstock as 
+select vendart.id_art
+from vendart,articulos
+where vendart.id_art=articulos.id_art
+group by vendart.id_art
+having sum(precio)=(select sum(precio)
+					from vendart,articulos
+                    where vendart.id_art=articulos.id_art
+					group by vendart.id_art
+                    order by 1 limit 1);
+                    
+select * from articulosstock;
+                    
+                    
+delete from articulos
+where id_art in (select id_art
+				from articulosstock);
+
+
+
+                    
+                    
+select * from articulosstock;
+   /* sin vista*/
+   
+delete from articulos
+where id_art in( select vendart.id_art
+				from vendart,articulos
+				where vendart.id_art=articulos.id_art
+				group by vendart.id_art
+				having sum(precio)=(select sum(precio)
+									from vendart,articulos
+									where vendart.id_art=articulos.id_art
+									group by vendart.id_art
+									order by 1 limit 1));                
+                    
+/*32 el tipo de articulo menos vendido deja de estar en stock*/
+
+delete from tipoart
+where id_tipo in (select id_tipo
+				from vendart,articulos
+				where vendart.id_art=articulos.id_art
+				group by id_tipo
+				having count(*)=(select count(*)
+								from vendart,articulos
+								where vendart.id_art=articulos.id_art
+								group by id_tipo
+								order by 1 limit 1));
+                
+                
+//*CREADO VISTA*/
+CREATE VIEW ARTICULOMENOSVENDIDO AS
+select id_tipo
+from vendart,articulos
+where vendart.id_art=articulos.id_art
+group by id_tipo
+having count(*)=(select count(*)
+				from vendart,articulos
+				where vendart.id_art=articulos.id_art
+				group by id_tipo
+                order by 1 limit 1);
+
+
+DELETE FROM ARTICULOS 
+WHERE id_tipo in (select id_tipo from articulomenosvendido);
+                
+/*33 el tipo con el que menos se ha ganado deja de estar en stock
+*/
+create view  tipostock as
+select id_tipo
+from vendart,articulos
+where vendart.id_art=articulos.id_art
+group by id_tipo
+having sum(precio)=(select sum(precio)
+				from vendart,articulos
+				where vendart.id_art=articulos.id_art
+				group by id_tipo
+                order by 1 limit 1);
+                
+delete from tipoart
+where id_tipo in (select id_tipo from tipostock);
+/*sin vista*/
+delete from tipoart
+where id_tipo in(select id_tipo
+					from vendart,articulos
+					where vendart.id_art=articulos.id_art
+					group by id_tipo
+					having sum(precio)=(select sum(precio)
+									from vendart,articulos
+									where vendart.id_art=articulos.id_art
+									group by id_tipo
+									order by 1 limit 1));
+
+/*34 se despide a todos los 
+trabajadores que no han vendido articulos  de bazar*/
+
+delete from vendedores
+where id_vend not in (select id_vend
+					from vendart,articulos,tipoart
+					where vendart.id_art=articulos.id_art
+					and articulos.id_tipo=tipoart.id_tipo
+					and nom_tipo like 'Bazar');
+
+
+select id_vend
+from vendart,articulos,tipoart
+where vendart.id_art=articulos.id_art
+and articulos.id_tipo=tipoart.id_tipo
+and nom_tipo like 'Bazar';
+
+/*35 se cierra LA TIENDA QUE MENOS DINERO HA GANADO*/
+
+delete from tienda
+where id_tienda in (select id_tienda
+				from vendart,vendedores,articulos
+				where vendart.id_vend=vendedores.id_vend
+			and vendart.id_art=articulos.id_art
+			group by id_tienda
+			having sum(precio)=(select sum(precio)
+								from vendart,vendedores,articulos
+								where vendart.id_vend=vendedores.id_vend
+								and vendart.id_art=articulos.id_art
+								group by id_tienda
+								order by 1 limit 1));
+
+/*averiguo la tienda que menos ha vendido*/
+select id_tienda
+from vendart,vendedores,articulos
+where vendart.id_vend=vendedores.id_vend
+and vendart.id_art=articulos.id_art
+group by id_tienda
+ having sum(precio)=(select sum(precio)
+					from vendart,vendedores,articulos
+					where vendart.id_vend=vendedores.id_vend
+					and vendart.id_art=articulos.id_art
+					group by id_tienda
+					order by 1 limit 1);
+/*36 Todos los trabajadores de sevilla
+ pasan a la tienda de Joymon*/
+ 
+update vendedores set id_tienda=(select 
+								id_tienda from tienda
+                                where nom_tienda like 
+								'Joymon')
+where id_tienda in (select id_tienda
+					from ciudad, tienda
+					where ciudad.id_ciudad=tienda.id_ciudad
+					and  nom_ciudad like 'Sevilla');
